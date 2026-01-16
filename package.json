@@ -1,0 +1,15 @@
+{
+  "name": "a2c-website",
+  "version": "1.0.0",
+  "description": "Addicted2Cardboard eCommerce website",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install"
+  }
+}
