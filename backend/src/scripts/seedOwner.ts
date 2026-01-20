@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import bcrypt from "bcryptjs";
 import { User, UserRole } from "../models/User.model";
 
 dotenv.config();
@@ -22,19 +21,15 @@ async function seedOwner() {
     // Check if owner already exists
     const existingOwner = await User.findOne({ email: ownerEmail });
     if (existingOwner) {
-      console.log("⚠️  Owner account already exists:", ownerEmail);
-      await mongoose.disconnect();
-      return;
+      // Delete existing owner so we can recreate with correct password
+      await User.deleteOne({ email: ownerEmail });
+      console.log("⚠️  Existing owner account deleted, recreating...");
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(ownerPassword, salt);
-
-    // Create owner account
+    // Create owner account (password will be hashed by the User model pre-save hook)
     const owner = new User({
       email: ownerEmail,
-      password: hashedPassword,
+      password: ownerPassword, // Don't hash here - the model does it automatically
       role: UserRole.OWNER,
       name: "Store Owner",
     });

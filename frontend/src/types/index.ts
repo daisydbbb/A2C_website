@@ -18,3 +18,45 @@ export interface AuthContextType {
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
 }
+
+export interface Product {
+  _id: string;
+  name: string;
+  description: string;
+  price: number;
+  stockQty: number;
+  imageUrls: string[];
+  sku: string;
+  tag?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateProductData {
+  name: string;
+  description: string;
+  price: number;
+  stockQty?: number;
+  imageUrls?: string[];
+  sku?: string;
+  tag?: string;
+}
+
+export interface UpdateProductData {
+  name?: string;
+  description?: string;
+  price?: number;
+  stockQty?: number;
+  imageUrls?: string[];
+  sku?: string;
+  tag?: string;
+  isActive?: boolean;
+}
+
+export interface Tag {
+  _id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}

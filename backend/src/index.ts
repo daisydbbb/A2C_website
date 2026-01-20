@@ -4,11 +4,13 @@ import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import authRoutes from "./routes/auth.routes";
+import productRoutes from "./routes/product.routes";
+import tagRoutes from "./routes/tag.routes";
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Middleware
 app.use(
@@ -35,6 +37,8 @@ mongoose
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/tags", tagRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
