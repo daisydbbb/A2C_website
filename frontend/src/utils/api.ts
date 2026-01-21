@@ -96,3 +96,49 @@ export const tagAPI = {
     return response.data;
   },
 };
+
+// Checkout API calls
+export interface CheckoutItem {
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  imageUrl: string;
+}
+
+export interface ShippingAddressInput {
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  line1: string;
+  line2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+}
+
+export const checkoutAPI = {
+  createPaymentIntent: async (
+    items: CheckoutItem[],
+    email: string,
+    shippingAddress?: ShippingAddressInput
+  ) => {
+    const response = await api.post('/checkout/create-payment-intent', {
+      items,
+      email,
+      shippingAddress,
+    });
+    return response.data;
+  },
+
+  getOrder: async (orderId: string) => {
+    const response = await api.get(`/checkout/orders/${orderId}`);
+    return response.data;
+  },
+
+  getMyOrders: async () => {
+    const response = await api.get('/checkout/orders');
+    return response.data;
+  },
+};

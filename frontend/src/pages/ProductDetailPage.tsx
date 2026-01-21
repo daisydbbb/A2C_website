@@ -4,17 +4,21 @@ import { Product } from "../types";
 import { productAPI } from "../utils/api";
 import logo from "../assets/logo.png";
 import { useAuth } from "../contexts/AuthContext";
+import { useCart } from "../contexts/CartContext";
 import { UserRole } from "../types";
 
 export const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user, logout } = useAuth();
+  const { addToCart, getCartItemCount } = useCart();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [addedToCart, setAddedToCart] = useState(false);
+
+  const cartItemCount = getCartItemCount();
 
   useEffect(() => {
     if (id) {
@@ -45,9 +49,8 @@ export const ProductDetailPage: React.FC = () => {
 
   const handleAddToCart = () => {
     if (!product) return;
-    
-    // TODO: Implement actual cart functionality
-    console.log(`Adding ${quantity} of ${product.name} to cart`);
+
+    addToCart(product, quantity);
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 2000);
   };
@@ -114,8 +117,52 @@ export const ProductDetailPage: React.FC = () => {
               </h1>
             </Link>
             <div className="flex items-center space-x-4">
+              <Link
+                to="/cart"
+                className="relative text-gray-700 hover:text-gray-900"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {cartItemCount}
+                  </span>
+                )}
+              </Link>
               {user ? (
                 <>
+                  <Link
+                    to="/account"
+                    className="text-gray-700 hover:text-gray-900"
+                    title="Account Settings"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-6 w-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </Link>
                   <span className="text-sm text-gray-700">
                     {user.email} ({user.role})
                   </span>
@@ -185,7 +232,7 @@ export const ProductDetailPage: React.FC = () => {
                   </div>
                 )}
               </div>
-              
+
               {/* Image Thumbnails */}
               {product.imageUrls.length > 1 && (
                 <div className="flex gap-2 overflow-x-auto">
@@ -212,13 +259,6 @@ export const ProductDetailPage: React.FC = () => {
 
             {/* Product Info Section */}
             <div>
-              {/* Tag */}
-              {product.tag && (
-                <span className="inline-block px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded-full mb-3">
-                  {product.tag}
-                </span>
-              )}
-
               {/* Name */}
               <h1 className="text-3xl font-bold text-gray-900 mb-4">
                 {product.name}
@@ -229,17 +269,6 @@ export const ProductDetailPage: React.FC = () => {
                 ${product.price.toFixed(2)}
               </p>
 
-              {/* Stock Status */}
-              <div className="mb-6">
-                {product.stockQty > 0 ? (
-                  <p className="text-green-600">
-                    In Stock ({product.stockQty} available)
-                  </p>
-                ) : (
-                  <p className="text-red-600 font-medium">Out of Stock</p>
-                )}
-              </div>
-
               {/* Description */}
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -249,9 +278,6 @@ export const ProductDetailPage: React.FC = () => {
                   {product.description}
                 </p>
               </div>
-
-              {/* SKU */}
-              <p className="text-sm text-gray-500 mb-6">SKU: {product.sku}</p>
 
               {/* Quantity and Add to Cart */}
               {product.stockQty > 0 && (

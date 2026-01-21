@@ -16,8 +16,14 @@ export const SignupPage: React.FC = () => {
     setError('');
     setLoading(true);
 
+    if (!name.trim()) {
+      setError('User name is required');
+      setLoading(false);
+      return;
+    }
+
     try {
-      await signup(email, password, name || undefined);
+      await signup(email, password, name);
       navigate('/');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Signup failed. Please try again.');
@@ -52,14 +58,15 @@ export const SignupPage: React.FC = () => {
           <div className="rounded-md shadow-sm space-y-4">
             <div>
               <label htmlFor="name" className="sr-only">
-                Name (optional)
+                User Name
               </label>
               <input
                 id="name"
                 name="name"
                 type="text"
+                required
                 className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                placeholder="Name (optional)"
+                placeholder="User Name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />

@@ -10,7 +10,7 @@ export interface IUser extends Document {
   email: string;
   password: string;
   role: UserRole;
-  name?: string;
+  name: string;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -38,6 +38,8 @@ const userSchema = new Schema<IUser>(
     },
     name: {
       type: String,
+      required: true,
+      unique: true,
       trim: true,
     },
   },
