@@ -91,6 +91,13 @@ export enum OrderStatus {
   DELIVERED = "delivered",
 }
 
+export enum FulfillmentStatus {
+  PENDING = "pending",
+  SHIPPED = "shipped",
+  DELIVERED = "delivered",
+  CANCELLED = "cancelled",
+}
+
 export enum PaymentStatus {
   PENDING = "pending",
   SUCCEEDED = "succeeded",
@@ -118,15 +125,27 @@ export interface ShippingAddress {
   country: string;
 }
 
+export interface ShippingInfo {
+  company: string;
+  trackingNumber: string;
+}
+
 export interface Order {
   _id: string;
+  userId?: {
+    _id: string;
+    name: string;
+    email: string;
+  };
   email: string;
   items: OrderItem[];
   subtotal: number;
   shipping: number;
   total: number;
   status: OrderStatus;
+  orderStatus: FulfillmentStatus;
   paymentStatus: PaymentStatus;
   shippingAddress?: ShippingAddress;
+  shippingInfo?: ShippingInfo;
   createdAt: string;
 }

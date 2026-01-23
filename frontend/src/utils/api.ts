@@ -141,4 +141,21 @@ export const checkoutAPI = {
     const response = await api.get('/checkout/orders');
     return response.data;
   },
+
+  getAllOrdersAdmin: async () => {
+    const response = await api.get('/checkout/orders/admin/all');
+    return response.data;
+  },
+
+  updateOrderAdmin: async (
+    orderId: string,
+    orderStatus: string,
+    shippingInfo?: { company: string; trackingNumber: string }
+  ) => {
+    const response = await api.patch(`/checkout/orders/admin/${orderId}`, {
+      orderStatus,
+      shippingInfo,
+    });
+    return response.data;
+  },
 };

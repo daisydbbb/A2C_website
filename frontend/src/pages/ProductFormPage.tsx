@@ -135,7 +135,7 @@ export const ProductFormPage: React.FC = () => {
         };
         await productAPI.createProduct(createData);
       }
-      navigate("/admin");
+      navigate("/admin/products");
     } catch (err: any) {
       setError(err.response?.data?.error || "Failed to save product");
     } finally {
@@ -165,7 +165,7 @@ export const ProductFormPage: React.FC = () => {
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600">{user?.email}</span>
               <Link
-                to="/admin"
+                to="/admin/products"
                 className="text-sm text-blue-600 hover:text-blue-800"
               >
                 Back to Admin
@@ -375,7 +375,7 @@ export const ProductFormPage: React.FC = () => {
 
               <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
                 <Link
-                  to="/admin"
+                  to="/admin/products"
                   className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
                 >
                   Cancel

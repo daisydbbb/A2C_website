@@ -1,8 +1,10 @@
 import express, { Request, Response } from "express";
 import Stripe from "stripe";
-import { Order, OrderStatus, PaymentStatus } from "../models/Order.model";
+import { Order, OrderStatus, PaymentStatus, FulfillmentStatus } from "../models/Order.model";
 import { Product } from "../models/Product.model";
-import { authenticate } from "../middleware/auth.middleware";
+import { User } from "../models/User.model";
+import { authenticate, requireRole } from "../middleware/auth.middleware";
+import { UserRole } from "../models/User.model";
 
 const router = express.Router();
 
@@ -145,6 +147,7 @@ router.post("/create-payment-intent", async (req: Request, res: Response) => {
       shipping,
       total,
       status: OrderStatus.PENDING,
+      orderStatus: FulfillmentStatus.PENDING,
       paymentStatus: PaymentStatus.PENDING,
       stripePaymentIntentId: paymentIntent.id,
       stripeClientSecret: paymentIntent.client_secret,
@@ -202,8 +205,10 @@ router.get("/orders/:orderId", async (req: Request, res: Response) => {
       shipping: order.shipping,
       total: order.total,
       status: order.status,
+      orderStatus: order.orderStatus,
       paymentStatus: order.paymentStatus,
       shippingAddress: order.shippingAddress,
+      shippingInfo: order.shippingInfo,
       createdAt: order.createdAt,
     };
 
@@ -229,5 +234,88 @@ router.get("/orders", authenticate, async (req: Request, res: Response) => {
     res.status(500).json({ error: error.message || "Failed to get orders" });
   }
 });
+
+// Get all orders (admin only)
+router.get(
+  "/orders/admin/all",
+  authenticate,
+  requireRole(UserRole.OWNER),
+  async (req: Request, res: Response) => {
+    try {
+      const orders = await Order.find()
+        .select("-stripeClientSecret")
+        .populate("userId", "name email")
+        .sort({ createdAt: -1 });
+
+      res.json({ orders });
+    } catch (error: any) {
+      console.error("Get all orders error:", error);
+      res.status(500).json({ error: error.message || "Failed to get orders" });
+    }
+  }
+);
+
+// Update order status and shipping info (admin only)
+router.patch(
+  "/orders/admin/:orderId",
+  authenticate,
+  requireRole(UserRole.OWNER),
+  async (req: Request, res: Response) => {
+    try {
+      const { orderId } = req.params;
+      const { orderStatus, shippingInfo } = req.body;
+
+      const order = await Order.findById(orderId);
+
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+
+      // Update order status if provided
+      if (orderStatus) {
+        if (!Object.values(FulfillmentStatus).includes(orderStatus)) {
+          return res.status(400).json({ error: "Invalid order status" });
+        }
+        order.orderStatus = orderStatus;
+      }
+
+      // Update shipping info if provided and status is shipped
+      if (shippingInfo && orderStatus === FulfillmentStatus.SHIPPED) {
+        if (!shippingInfo.company || !shippingInfo.trackingNumber) {
+          return res.status(400).json({
+            error: "Shipping company and tracking number are required when status is shipped",
+          });
+        }
+        order.shippingInfo = {
+          company: shippingInfo.company,
+          trackingNumber: shippingInfo.trackingNumber,
+        };
+      }
+
+      await order.save();
+
+      // Return updated order
+      const orderData = {
+        _id: order._id,
+        email: order.email,
+        items: order.items,
+        subtotal: order.subtotal,
+        shipping: order.shipping,
+        total: order.total,
+        status: order.status,
+        orderStatus: order.orderStatus,
+        paymentStatus: order.paymentStatus,
+        shippingAddress: order.shippingAddress,
+        shippingInfo: order.shippingInfo,
+        createdAt: order.createdAt,
+      };
+
+      res.json({ order: orderData });
+    } catch (error: any) {
+      console.error("Update order error:", error);
+      res.status(500).json({ error: error.message || "Failed to update order" });
+    }
+  }
+);
 
 export default router;

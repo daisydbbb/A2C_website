@@ -9,6 +9,13 @@ export enum OrderStatus {
   DELIVERED = "delivered",
 }
 
+export enum FulfillmentStatus {
+  PENDING = "pending",
+  SHIPPED = "shipped",
+  DELIVERED = "delivered",
+  CANCELLED = "cancelled",
+}
+
 export enum PaymentStatus {
   PENDING = "pending",
   SUCCEEDED = "succeeded",
@@ -36,6 +43,11 @@ export interface IShippingAddress {
   country: string;
 }
 
+export interface IShippingInfo {
+  company: string;
+  trackingNumber: string;
+}
+
 export interface IOrder extends Document {
   userId?: mongoose.Types.ObjectId;
   email: string;
@@ -44,10 +56,12 @@ export interface IOrder extends Document {
   shipping: number;
   total: number;
   status: OrderStatus;
+  orderStatus: FulfillmentStatus;
   paymentStatus: PaymentStatus;
   stripePaymentIntentId: string;
   stripeClientSecret?: string;
   shippingAddress?: IShippingAddress;
+  shippingInfo?: IShippingInfo;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -95,6 +109,14 @@ const shippingAddressSchema = new Schema<IShippingAddress>(
   { _id: false }
 );
 
+const shippingInfoSchema = new Schema<IShippingInfo>(
+  {
+    company: { type: String, required: true },
+    trackingNumber: { type: String, required: true },
+  },
+  { _id: false }
+);
+
 const orderSchema = new Schema<IOrder>(
   {
     userId: {
@@ -135,6 +157,11 @@ const orderSchema = new Schema<IOrder>(
       enum: Object.values(OrderStatus),
       default: OrderStatus.PENDING,
     },
+    orderStatus: {
+      type: String,
+      enum: Object.values(FulfillmentStatus),
+      default: FulfillmentStatus.PENDING,
+    },
     paymentStatus: {
       type: String,
       enum: Object.values(PaymentStatus),
@@ -151,6 +178,9 @@ const orderSchema = new Schema<IOrder>(
     shippingAddress: {
       type: shippingAddressSchema,
     },
+    shippingInfo: {
+      type: shippingInfoSchema,
+    },
   },
   {
     timestamps: true,
@@ -162,6 +192,8 @@ const orderSchema = new Schema<IOrder>(
 orderSchema.index({ userId: 1 });
 orderSchema.index({ email: 1 });
 orderSchema.index({ status: 1 });
+orderSchema.index({ orderStatus: 1 });
+orderSchema.index({ paymentStatus: 1 });
 orderSchema.index({ createdAt: -1 });
 
 export const Order = mongoose.model<IOrder>("Order", orderSchema);

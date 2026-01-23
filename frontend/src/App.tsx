@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -6,6 +6,10 @@ import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
 import { AdminPage } from "./pages/AdminPage";
+import { ProductsPage } from "./pages/ProductsPage";
+import { OrdersPage } from "./pages/OrdersPage";
+import { CustomersPage } from "./pages/CustomersPage";
+import { OrderDetailPage } from "./pages/OrderDetailPage";
 import { ProductFormPage } from "./pages/ProductFormPage";
 import { ProductDetailPage } from "./pages/ProductDetailPage";
 import { CartPage } from "./pages/CartPage";
@@ -35,7 +39,13 @@ function App() {
                   <AdminPage />
                 </ProtectedRoute>
               }
-            />
+            >
+              <Route index element={<Navigate to="/admin/products" replace />} />
+              <Route path="products" element={<ProductsPage />} />
+              <Route path="orders" element={<OrdersPage />} />
+              <Route path="orders/:id" element={<OrderDetailPage />} />
+              <Route path="customers" element={<CustomersPage />} />
+            </Route>
             <Route
               path="/admin/products/new"
               element={

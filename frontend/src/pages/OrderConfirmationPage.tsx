@@ -1,15 +1,18 @@
 import { useState, useEffect } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { Order, OrderStatus, PaymentStatus } from "../types";
+import { Order, PaymentStatus } from "../types";
 import { checkoutAPI } from "../utils/api";
+import { useCart } from "../contexts/CartContext";
 import logo from "../assets/logo.png";
 
 export const OrderConfirmationPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const [searchParams] = useSearchParams();
+  const { clearCart } = useCart();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [cartCleared, setCartCleared] = useState(false);
 
   // Check payment status from URL params (Stripe redirect)
   const paymentIntentStatus = searchParams.get("redirect_status");
@@ -31,6 +34,18 @@ export const OrderConfirmationPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Clear cart when payment is successful
+  useEffect(() => {
+    const isPaymentSuccessful =
+      paymentIntentStatus === "succeeded" ||
+      order?.paymentStatus === PaymentStatus.SUCCEEDED;
+
+    if (isPaymentSuccessful && !cartCleared) {
+      clearCart();
+      setCartCleared(true);
+    }
+  }, [order, paymentIntentStatus, cartCleared, clearCart]);
 
   // Poll for order status update if payment succeeded but order not yet updated
   useEffect(() => {
@@ -221,17 +236,19 @@ export const OrderConfirmationPage: React.FC = () => {
 
           {/* Order Status */}
           <div className="flex items-center gap-2 mb-6">
-            <span className="text-sm text-gray-600">Status:</span>
+            <span className="text-sm text-gray-600">Payment Status:</span>
             <span
               className={`px-2 py-1 text-xs font-medium rounded-full ${
-                order.status === OrderStatus.PAID
+                order.paymentStatus === PaymentStatus.SUCCEEDED
                   ? "bg-green-100 text-green-800"
-                  : order.status === OrderStatus.FAILED
+                  : order.paymentStatus === PaymentStatus.FAILED
                   ? "bg-red-100 text-red-800"
                   : "bg-yellow-100 text-yellow-800"
               }`}
             >
-              {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+              {order.paymentStatus === PaymentStatus.SUCCEEDED
+                ? "Paid"
+                : order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
             </span>
           </div>
 
@@ -319,6 +336,12 @@ export const OrderConfirmationPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
             to="/"
+            onClick={() => {
+              // Ensure cart is cleared before navigating
+              if (!cartCleared) {
+                clearCart();
+              }
+            }}
             className="inline-block bg-blue-600 text-white px-6 py-3 rounded-md font-semibold hover:bg-blue-700 transition-colors text-center"
           >
             Continue Shopping

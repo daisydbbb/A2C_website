@@ -1,6 +1,6 @@
 import express, { Request, Response } from "express";
 import Stripe from "stripe";
-import { Order, OrderStatus, PaymentStatus } from "../models/Order.model";
+import { Order, OrderStatus, PaymentStatus, FulfillmentStatus } from "../models/Order.model";
 import { Product } from "../models/Product.model";
 
 const router = express.Router();
@@ -66,9 +66,10 @@ router.post(
           });
 
           if (order) {
-            // Update order status
+            // Update payment status only, orderStatus remains pending for owner to update
             order.paymentStatus = PaymentStatus.SUCCEEDED;
-            order.status = OrderStatus.PAID;
+            order.status = OrderStatus.PAID; // Keep for backward compatibility
+            // orderStatus stays as PENDING - owner will update it manually
             await order.save();
 
             // Decrease stock for each item
