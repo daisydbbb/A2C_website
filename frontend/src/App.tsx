@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
+import { SocketProvider } from "./contexts/SocketContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
@@ -21,9 +22,10 @@ import { UserRole } from "./types";
 function App() {
   return (
     <Router>
-      <AuthProvider>
-        <CartProvider>
-          <Routes>
+      <SocketProvider>
+        <AuthProvider>
+          <CartProvider>
+            <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
@@ -62,9 +64,10 @@ function App() {
                 </ProtectedRoute>
               }
             />
-          </Routes>
-        </CartProvider>
-      </AuthProvider>
+            </Routes>
+          </CartProvider>
+        </AuthProvider>
+      </SocketProvider>
     </Router>
   );
 }

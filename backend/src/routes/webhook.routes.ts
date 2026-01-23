@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import Stripe from "stripe";
 import { Order, OrderStatus, PaymentStatus, FulfillmentStatus } from "../models/Order.model";
 import { Product } from "../models/Product.model";
+import { io } from "../index";
 
 const router = express.Router();
 
@@ -72,11 +73,28 @@ router.post(
             // orderStatus stays as PENDING - owner will update it manually
             await order.save();
 
-            // Decrease stock for each item
+            // Decrease stock for each item and emit real-time updates
+            const stockUpdates: Array<{ productId: string; stockQty: number }> = [];
+            
             for (const item of order.items) {
-              await Product.findByIdAndUpdate(item.productId, {
-                $inc: { stockQty: -item.quantity },
-              });
+              const updatedProduct = await Product.findByIdAndUpdate(
+                item.productId,
+                { $inc: { stockQty: -item.quantity } },
+                { new: true }
+              );
+              
+              if (updatedProduct) {
+                stockUpdates.push({
+                  productId: updatedProduct._id.toString(),
+                  stockQty: updatedProduct.stockQty,
+                });
+              }
+            }
+
+            // Emit stock update events to all connected clients
+            if (stockUpdates.length > 0) {
+              io.emit("stock-update", { updates: stockUpdates });
+              console.log(`📡 Emitted stock updates for ${stockUpdates.length} products`);
             }
 
             console.log(`Order ${order._id} marked as paid`);
@@ -145,11 +163,28 @@ router.post(
             order.paymentStatus = PaymentStatus.REFUNDED;
             await order.save();
 
-            // Restore stock for each item
+            // Restore stock for each item and emit real-time updates
+            const stockUpdates: Array<{ productId: string; stockQty: number }> = [];
+            
             for (const item of order.items) {
-              await Product.findByIdAndUpdate(item.productId, {
-                $inc: { stockQty: item.quantity },
-              });
+              const updatedProduct = await Product.findByIdAndUpdate(
+                item.productId,
+                { $inc: { stockQty: item.quantity } },
+                { new: true }
+              );
+              
+              if (updatedProduct) {
+                stockUpdates.push({
+                  productId: updatedProduct._id.toString(),
+                  stockQty: updatedProduct.stockQty,
+                });
+              }
+            }
+
+            // Emit stock update events to all connected clients
+            if (stockUpdates.length > 0) {
+              io.emit("stock-update", { updates: stockUpdates });
+              console.log(`📡 Emitted stock updates for ${stockUpdates.length} products (refund)`);
             }
 
             console.log(`Order ${order._id} marked as refunded, stock restored`);

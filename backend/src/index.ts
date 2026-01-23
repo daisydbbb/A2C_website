@@ -26,6 +26,8 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
+import { createServer } from "http";
+import { Server, Socket } from "socket.io";
 import authRoutes from "./routes/auth.routes";
 import productRoutes from "./routes/product.routes";
 import tagRoutes from "./routes/tag.routes";
@@ -33,7 +35,20 @@ import checkoutRoutes from "./routes/checkout.routes";
 import webhookRoutes from "./routes/webhook.routes";
 
 const app = express();
+const httpServer = createServer(app);
 const PORT = process.env.PORT || 5001;
+
+// Initialize Socket.IO with CORS
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
+
+// Export io for use in other modules
+export { io };
 
 // CORS middleware
 app.use(
@@ -75,6 +90,16 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "OK", message: "Server is running" });
 });
 
-app.listen(PORT, () => {
+// Socket.IO connection handling
+io.on("connection", (socket: Socket) => {
+  console.log(`✅ Client connected: ${socket.id}`);
+
+  socket.on("disconnect", () => {
+    console.log(`❌ Client disconnected: ${socket.id}`);
+  });
+});
+
+httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📡 Socket.IO server ready`);
 });

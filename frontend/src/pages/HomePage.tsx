@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
+import { useSocket } from "../contexts/SocketContext";
 import { UserRole, Product } from "../types";
 import { productAPI } from "../utils/api";
 import logo from "../assets/logo.png";
@@ -9,6 +10,7 @@ import logo from "../assets/logo.png";
 export const HomePage: React.FC = () => {
   const { user, logout } = useAuth();
   const { getCartItemCount } = useCart();
+  const { socket } = useSocket();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -17,6 +19,29 @@ export const HomePage: React.FC = () => {
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  // Listen for real-time stock updates
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleStockUpdate = (data: { updates: Array<{ productId: string; stockQty: number }> }) => {
+      setProducts((prevProducts) => {
+        return prevProducts.map((product) => {
+          const update = data.updates.find((u) => u.productId === product._id);
+          if (update) {
+            return { ...product, stockQty: update.stockQty };
+          }
+          return product;
+        });
+      });
+    };
+
+    socket.on("stock-update", handleStockUpdate);
+
+    return () => {
+      socket.off("stock-update", handleStockUpdate);
+    };
+  }, [socket]);
 
   const fetchProducts = async () => {
     try {

@@ -11,6 +11,9 @@ export const OrderDetailPage: React.FC = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [updateSuccess, setUpdateSuccess] = useState(false);
+  const [isRefunding, setIsRefunding] = useState(false);
+  const [refundError, setRefundError] = useState<string | null>(null);
+  const [refundSuccess, setRefundSuccess] = useState(false);
 
   // Form state for order status update
   const [selectedStatus, setSelectedStatus] = useState<FulfillmentStatus>(FulfillmentStatus.PENDING);
@@ -110,6 +113,33 @@ export const OrderDetailPage: React.FC = () => {
       setUpdateError(err.response?.data?.error || "Failed to update order");
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleRefund = async () => {
+    if (!order) return;
+
+    // Confirm before refunding
+    if (!window.confirm(`Are you sure you want to refund $${order.total.toFixed(2)} for this order?`)) {
+      return;
+    }
+
+    try {
+      setIsRefunding(true);
+      setRefundError(null);
+      setRefundSuccess(false);
+
+      const response = await checkoutAPI.refundOrder(order._id);
+
+      setOrder(response.order);
+      setRefundSuccess(true);
+
+      // Clear success message after 5 seconds
+      setTimeout(() => setRefundSuccess(false), 5000);
+    } catch (err: any) {
+      setRefundError(err.response?.data?.error || "Failed to process refund");
+    } finally {
+      setIsRefunding(false);
     }
   };
 
@@ -384,6 +414,35 @@ export const OrderDetailPage: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Refund Section */}
+        {order.paymentStatus === PaymentStatus.SUCCEEDED && (
+          <div className="border-t pt-6 mt-6">
+            <h3 className="text-sm font-medium text-gray-500 mb-2">Refund</h3>
+            <div className="flex items-center gap-3">
+              <p className="text-sm text-gray-600">
+                Issue a full refund of ${order.total.toFixed(2)} for this order.
+              </p>
+              <button
+                onClick={handleRefund}
+                disabled={isRefunding}
+                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                {isRefunding ? "Processing..." : "Issue Refund"}
+              </button>
+            </div>
+            {refundSuccess && (
+              <div className="mt-3 p-2 bg-green-50 text-green-700 text-sm rounded">
+                Refund processed successfully! The payment status has been updated.
+              </div>
+            )}
+            {refundError && (
+              <div className="mt-3 p-2 bg-red-50 text-red-700 text-sm rounded">
+                {refundError}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Items Card */}

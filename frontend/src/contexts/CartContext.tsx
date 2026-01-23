@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { CartItem, CartContextType, Product } from "../types";
+import { useSocket } from "./SocketContext";
 
 const CART_STORAGE_KEY = "a2c_cart";
 
@@ -18,6 +19,7 @@ interface CartProviderProps {
 }
 
 export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
+  const { socket } = useSocket();
   const [items, setItems] = useState<CartItem[]>(() => {
     // Initialize from localStorage
     try {
@@ -32,6 +34,36 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   useEffect(() => {
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
   }, [items]);
+
+  // Listen for real-time stock updates and update cart items
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleStockUpdate = (data: { updates: Array<{ productId: string; stockQty: number }> }) => {
+      setItems((currentItems) => {
+        return currentItems.map((item) => {
+          const update = data.updates.find((u) => u.productId === item.productId);
+          if (update) {
+            // Update stock quantity and adjust cart quantity if needed
+            const newStockQty = update.stockQty;
+            const newQuantity = Math.min(item.quantity, newStockQty);
+            return {
+              ...item,
+              stockQty: newStockQty,
+              quantity: newQuantity,
+            };
+          }
+          return item;
+        });
+      });
+    };
+
+    socket.on("stock-update", handleStockUpdate);
+
+    return () => {
+      socket.off("stock-update", handleStockUpdate);
+    };
+  }, [socket]);
 
   const addToCart = (product: Product, quantity: number) => {
     setItems((currentItems) => {

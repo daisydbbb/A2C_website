@@ -158,4 +158,9 @@ export const checkoutAPI = {
     });
     return response.data;
   },
+
+  refundOrder: async (orderId: string) => {
+    const response = await api.post(`/checkout/orders/admin/${orderId}/refund`);
+    return response.data;
+  },
 };

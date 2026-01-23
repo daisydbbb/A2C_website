@@ -5,12 +5,14 @@ import { productAPI } from "../utils/api";
 import logo from "../assets/logo.png";
 import { useAuth } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
+import { useSocket } from "../contexts/SocketContext";
 import { UserRole } from "../types";
 
 export const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user, logout } = useAuth();
   const { addToCart, getCartItemCount } = useCart();
+  const { socket } = useSocket();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +27,31 @@ export const ProductDetailPage: React.FC = () => {
       fetchProduct(id);
     }
   }, [id]);
+
+  // Listen for real-time stock updates
+  useEffect(() => {
+    if (!socket || !product) return;
+
+    const handleStockUpdate = (data: { updates: Array<{ productId: string; stockQty: number }> }) => {
+      const update = data.updates.find((u) => u.productId === product._id);
+      if (update) {
+        setProduct((prevProduct) => {
+          if (!prevProduct) return prevProduct;
+          return { ...prevProduct, stockQty: update.stockQty };
+        });
+        // Reset quantity if it exceeds new stock
+        if (quantity > update.stockQty) {
+          setQuantity(Math.max(1, update.stockQty));
+        }
+      }
+    };
+
+    socket.on("stock-update", handleStockUpdate);
+
+    return () => {
+      socket.off("stock-update", handleStockUpdate);
+    };
+  }, [socket, product, quantity]);
 
   const fetchProduct = async (productId: string) => {
     try {

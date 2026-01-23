@@ -318,4 +318,103 @@ router.patch(
   }
 );
 
+// Issue refund for an order (admin only)
+router.post(
+  "/orders/admin/:orderId/refund",
+  authenticate,
+  requireRole(UserRole.OWNER),
+  async (req: Request, res: Response) => {
+    try {
+      const { orderId } = req.params;
+
+      const order = await Order.findById(orderId);
+
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+
+      // Check if order can be refunded
+      if (order.paymentStatus === PaymentStatus.REFUNDED) {
+        return res.status(400).json({
+          error: "Order has already been refunded",
+        });
+      }
+
+      if (order.paymentStatus !== PaymentStatus.SUCCEEDED) {
+        return res.status(400).json({
+          error: "Only paid orders can be refunded",
+        });
+      }
+
+      // Get Stripe instance
+      let stripe: Stripe;
+      try {
+        stripe = getStripe();
+      } catch (error: any) {
+        return res.status(500).json({
+          error: "Stripe is not configured. Please set STRIPE_SECRET_KEY in environment variables.",
+        });
+      }
+
+      // Retrieve the payment intent to get the charge ID
+      const paymentIntent = await stripe.paymentIntents.retrieve(
+        order.stripePaymentIntentId
+      );
+
+      if (!paymentIntent.latest_charge) {
+        return res.status(400).json({
+          error: "No charge found for this payment intent",
+        });
+      }
+
+      // Create refund
+      const refund = await stripe.refunds.create({
+        charge: paymentIntent.latest_charge as string,
+        amount: Math.round(order.total * 100), // Convert to cents
+      });
+
+      // Update order status (webhook will also handle this, but update immediately for better UX)
+      order.paymentStatus = PaymentStatus.REFUNDED;
+      await order.save();
+
+      // Restore stock for each item
+      for (const item of order.items) {
+        await Product.findByIdAndUpdate(item.productId, {
+          $inc: { stockQty: item.quantity },
+        });
+      }
+
+      // Return updated order
+      const orderData = {
+        _id: order._id,
+        email: order.email,
+        items: order.items,
+        subtotal: order.subtotal,
+        shipping: order.shipping,
+        total: order.total,
+        status: order.status,
+        orderStatus: order.orderStatus,
+        paymentStatus: order.paymentStatus,
+        shippingAddress: order.shippingAddress,
+        shippingInfo: order.shippingInfo,
+        createdAt: order.createdAt,
+      };
+
+      res.json({
+        order: orderData,
+        refund: {
+          id: refund.id,
+          amount: refund.amount / 100,
+          status: refund.status,
+        },
+      });
+    } catch (error: any) {
+      console.error("Refund error:", error);
+      res.status(500).json({
+        error: error.message || "Failed to process refund",
+      });
+    }
+  }
+);
+
 export default router;
